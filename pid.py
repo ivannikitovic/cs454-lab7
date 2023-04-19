@@ -29,6 +29,10 @@ def parse_args():
     cmd_args.setpoint = Point(*cmd_args.setpoint)
     return cmd_args
 
+oldx = 0.0
+oldy = 0.0
+currentx = 0.0
+currenty = 0.0
 
 def run_controller(kp, kd, setpoint, noise, filtered, world: World):
 
@@ -37,25 +41,31 @@ def run_controller(kp, kd, setpoint, noise, filtered, world: World):
         p.setJointMotorControl2(world.plate, 0, p.POSITION_CONTROL, targetPosition=np.clip(-theta_y, -0.1, 0.1), force=5, maxVelocity=2)
 
     # you can set the variables that should stay accross control loop here
-
+    
     def pd_controller(x, y, kp, kd, setpoint):
         """Implement a PD controller, you can access the setpoint via setpoint.x and setpoint.y
         the plate is small around 0.1 to 0.2 meters. You will have to calculate the error and change in error and 
         use those to calculate the angle to apply to the plate."""
-        return 0.0, 0.0
+        errorx = currentx - setpoint.x
+        errory = currenty - setpoint.y
+        dx = currentx-oldx
+        dy = currenty-oldy
+        thetax = (-(kp*errorx)-(kd*dx))*0.2 #thetamax-thetamin
+        thetay = (-(kp*errory)-(kd*dy))*0.2
+        return thetay, thetax
 
 
     def filter_val(val):
         """Implement a filter here, you can use scipy.signal.butter to compute the filter coefficients and then scipy.signal.lfilter to apply the filter.but we recommend you implement it yourself instead of using lfilter because you'll have to do that on the real system later.
         Take a look at the butterworth example written by Renato for inspiration."""
-        pass
+        return(val)
 
     def every_10ms(i: int, t: float):
         '''This function is called every ms and performs the following:
         1. Get the measurement of the position of the ball
         2. Calculate the forces to be applied to the plate
         3. Apply the forces to the plate
-        '''
+        '''        
         (x,y,z), orientation = p.getBasePositionAndOrientation(world.sphere)
         if noise:
             x += utils.noise(t) # the noise added has a frequency between 30 and 50 Hz
@@ -64,12 +74,22 @@ def run_controller(kp, kd, setpoint, noise, filtered, world: World):
         if filtered:
             x = filter_val(x)
             y = filter_val(y)
+        
+        global oldx
+        global oldy
+        global currentx
+        global currenty
+        oldx = currentx
+        oldy = currenty
+        currentx = x
+        currenty = y
 
         (angle_x, angle_y) = pd_controller(x, y, kp, kd, setpoint)
         set_plate_angles(angle_x, angle_y)
 
         if i%10 == 0: # print every 100 ms
             print(f"t: {t:.2f}, x: {x:.3f},\ty: {y:.3f},\tax: {angle_x:.3f},\tay: {angle_y:.3f}")
+            print(f"dx: {currentx-oldx:.10f}, dy:{currenty-oldy:.10f}")
 
     utils.loop_every(0.01, every_10ms) # we run our controller at 100 Hz using a linux alarm signal
 
