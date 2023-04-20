@@ -46,13 +46,13 @@ def run_controller(kp, kd, setpoint, noise, filtered, world: World):
         """Implement a PD controller, you can access the setpoint via setpoint.x and setpoint.y
         the plate is small around 0.1 to 0.2 meters. You will have to calculate the error and change in error and 
         use those to calculate the angle to apply to the plate."""
-        errorx = currentx - setpoint.x
-        errory = currenty - setpoint.y
-        dx = currentx-oldx
-        dy = currenty-oldy
+        errorx = currentx-setpoint.x
+        errory = currenty-setpoint.y
+        dx = (currentx-oldx)
+        dy = (currenty-oldy)
         thetax = (-(kp*errorx)-(kd*dx))*0.2 #thetamax-thetamin
         thetay = (-(kp*errory)-(kd*dy))*0.2
-        return thetay, thetax
+        return (thetax, thetay)
 
 
     def filter_val(val):
@@ -89,7 +89,7 @@ def run_controller(kp, kd, setpoint, noise, filtered, world: World):
 
         if i%10 == 0: # print every 100 ms
             print(f"t: {t:.2f}, x: {x:.3f},\ty: {y:.3f},\tax: {angle_x:.3f},\tay: {angle_y:.3f}")
-            print(f"dx: {currentx-oldx:.10f}, dy:{currenty-oldy:.10f}")
+            print(f"ex: {setpoint.x-currentx:.10f}, ey: {setpoint.y-currenty:.10f}, dx: {currentx-oldx:.10f}, dy:{currenty-oldy:.10f}")
 
     utils.loop_every(0.01, every_10ms) # we run our controller at 100 Hz using a linux alarm signal
 
