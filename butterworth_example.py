@@ -18,7 +18,7 @@ import random
 import utils
 
 ## Where to save generated figures
-savepath="/home/renato/BU/Classes/CS454_Sp23/Python/";
+savepath="/home/nddq/BU/Classes/CS454_Sp23/Python/";
 
 ## Generic function to compute the FFT.
 ## @s: sampled signal for which to compute the FFT
