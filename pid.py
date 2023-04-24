@@ -36,9 +36,9 @@ currentx = 0.0
 currenty = 0.0
 
 FILTER_ORDER = 2  # The order of the Butterworth filter (tunable)
-CUTOFF_FREQUENCY = 20  # The cutoff frequency of the filter in Hz (tunable)
+CUTOFF_FREQUENCY = 40  # The cutoff frequency of the filter in Hz (tunable)
 SAMPLE_RATE = 100  # The sample rate of the incoming data in Hz
-BUFFER_SIZE = 100  # The maximum size of the buffer (tunable)
+BUFFER_SIZE = 500  # The maximum size of the buffer (tunable)
 
 
 def run_controller(kp, kd, setpoint, noise, filtered, world: World):
@@ -62,17 +62,20 @@ def run_controller(kp, kd, setpoint, noise, filtered, world: World):
         return (thetax, thetay)
 
 
-    def filter_val(val):
+    def filter_val(val, key):
         """Implement a filter here, you can use scipy.signal.butter to compute the filter coefficients and then scipy.signal.lfilter to apply the filter.but we recommend you implement it yourself instead of using lfilter because you'll have to do that on the real system later.
         Take a look at the butterworth example written by Renato for inspiration."""
-        if not hasattr(filter_val, "buffer"): # turns the filter_val function into a "stateful" function so we can maintain state within a function without relying on global variables
-            filter_val.buffer = deque(maxlen=BUFFER_SIZE)
+        if not hasattr(filter_val, "buffers"): # turns the filter_val function into a "stateful" function so we can maintain state within a function without relying on global variables
+            filter_val.buffers = {}
             filter_val.b, filter_val.a = butter(FILTER_ORDER, CUTOFF_FREQUENCY / (SAMPLE_RATE / 2), btype="low")
 
-        filter_val.buffer.append(val)
+        if key not in filter_val.buffers:
+            filter_val.buffers[key] = deque(maxlen=BUFFER_SIZE)
+
+        filter_val.buffers[key].append(val)
 
         # Apply the filter to the buffer using the stored coefficients
-        filtered_data = lfilter(filter_val.b, filter_val.a, filter_val.buffer)
+        filtered_data = lfilter(filter_val.b, filter_val.a, filter_val.buffers[key])
 
         return filtered_data[-1]  # Return the latest filtered value
 
@@ -88,8 +91,8 @@ def run_controller(kp, kd, setpoint, noise, filtered, world: World):
             y += utils.noise(t, seed = 43) # so that the noise on y is different than the one on x
         
         if filtered:
-            x = filter_val(x)
-            y = filter_val(y)
+            x = filter_val(x, 'x')
+            y = filter_val(y, 'y')
         
         global oldx
         global oldy
